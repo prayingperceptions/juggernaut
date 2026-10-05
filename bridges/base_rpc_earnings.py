@@ -104,6 +104,25 @@ def fetch_logs(rpc_url: str, pay_to: str, from_block: int, to_block: int) -> lis
                 [build_log_filter(pay_to, from_block, to_block)])
 
 
+# Public RPCs (e.g. mainnet.base.org) reject eth_getLogs over wide block
+# ranges with HTTP 413. Chunk the scan so a long catch-up never fails as
+# one giant request -- and, critically, never gets stuck: without chunking,
+# a 413 leaves last_block unadvanced and every later poll 413s the same way.
+MAX_RANGE_BLOCKS = 500
+
+
+def fetch_logs_chunked(rpc_url: str, pay_to: str,
+                       from_block: int, to_block: int) -> list:
+    """eth_getLogs over [from_block, to_block], in MAX_RANGE_BLOCKS chunks."""
+    out: list = []
+    cur = from_block
+    while cur <= to_block:
+        chunk_end = min(cur + MAX_RANGE_BLOCKS - 1, to_block)
+        out.extend(fetch_logs(rpc_url, pay_to, cur, chunk_end))
+        cur = chunk_end + 1
+    return out
+
+
 # -- state -------------------------------------------------------------------
 
 def load_state(path: str) -> tuple[int | None, set]:
@@ -159,7 +178,8 @@ def main() -> None:
             if tip <= last_block:
                 print(f"[bridge] caught up at block {last_block}", flush=True)
             else:
-                logs = fetch_logs(args.rpc_url, args.pay_to, last_block + 1, tip)
+                logs = fetch_logs_chunked(args.rpc_url, args.pay_to,
+                                          last_block + 1, tip)
                 price = btc_usd_price()
                 fresh = 0
                 failed_blocks = []
