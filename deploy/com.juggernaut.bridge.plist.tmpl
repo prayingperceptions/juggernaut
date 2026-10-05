@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.juggernaut.bridge</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>{{REPO}}/.venv/bin/python</string>
+    <string>-u</string>
+    <string>{{REPO}}/bridges/base_rpc_earnings.py</string>
+    <string>--pay-to</string><string>0x2091125bFE4259b2CfA889165Beb6290d0Df5DeA</string>
+    <string>--earn-url</string><string>http://127.0.0.1:8787/earn</string>
+    <string>--source</string><string>token-risk-api/x402</string>
+    <string>--interval</string><string>300</string>
+  </array>
+  <key>WorkingDirectory</key><string>{{REPO}}</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>{{REPO}}/state/logs/bridge.log</string>
+  <key>StandardErrorPath</key><string>{{REPO}}/state/logs/bridge.err</string>
+</dict>
+</plist>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.juggernaut.agent</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>{{REPO}}/.venv/bin/python</string>
+    <string>-u</string>
+    <string>{{REPO}}/run.py</string>
+    <string>--mission</string><string>missions/sats_or_death.json</string>
+    <string>--brain</string><string>laya</string>
+    <string>--auto-approve</string>
+  </array>
+  <key>WorkingDirectory</key><string>{{REPO}}</string>
+  <key>RunAtLoad</key><true/>
+  <!-- KeepAlive means a death (exit 42) is automatically followed by
+       resurrection: on restart the agent archives the death report,
+       absorbs its lesson, and begins a fresh epoch. -->
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>{{REPO}}/state/logs/agent.log</string>
+  <key>StandardErrorPath</key><string>{{REPO}}/state/logs/agent.err</string>
+</dict>
+</plist>
