@@ -18,6 +18,16 @@ next run smarter.*
 
 ---
 
+Juggernaut is a template for building AI agents that accept exactly one
+mission and pursue it until completion. Its reflex layer is
+[laya-mlx](https://pypi.org/project/laya-mlx/) — an open-weight decision
+engine that answers *done?*, *what next?*, and *how am I doing?* in a single
+~10ms forward pass, fully local on Apple Silicon. A survival clock enforces
+the mission: earn or accomplish within each epoch, or die — writing a death
+report that makes the next run smarter. Market "no"s are never final; the
+cage (allowlists, approvals, kill switch) is absolute. Its first mission,
+SATS OR DEATH, earns Bitcoin daily via a live x402 pay-per-call API on Base.
+
 ## The idea
 
 Most agents are interns: they try, they stall, they ask what you meant. A
