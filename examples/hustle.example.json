@@ -1,0 +1,1 @@
+{"current_price_sats":1000,"payout_address":"bc1qREPLACE_WITH_YOUR_ADDRESS","pitch":"pay-per-call microservice, settled in sats","price_ladder_sats":[1000,500,250,100],"service_name":"juggernaut-service","service_url":"https://example.com/health","sweep_mode":"manual","sweep_threshold_sats":1000}

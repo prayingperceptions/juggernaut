@@ -1,0 +1,1 @@
+{"done_proposition":"<noul proposition: what is true when this mission is complete?>","epoch_hours":0,"max_ticks":0,"min_sats_per_epoch":0,"name":"MISSION NAME","objective":"<one sentence. The only thing that matters. The agent cannot be given a second goal.>","progress_rubric":["<level 0>","<level 1>","<level 2>","<level 3>"],"stall_ticks":20,"tick_seconds":60}
