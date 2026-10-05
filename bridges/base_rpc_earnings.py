@@ -113,10 +113,18 @@ MAX_RANGE_BLOCKS = 500
 
 def fetch_logs_chunked(rpc_url: str, pay_to: str,
                        from_block: int, to_block: int) -> list:
-    """eth_getLogs over [from_block, to_block], in MAX_RANGE_BLOCKS chunks."""
+    """eth_getLogs over [from_block, to_block], in MAX_RANGE_BLOCKS chunks.
+
+    Sleeps briefly between chunks: public RPCs rate-limit bursts (429)
+    as well as wide ranges (413).
+    """
     out: list = []
     cur = from_block
+    first = True
     while cur <= to_block:
+        if not first:
+            time.sleep(1.0)
+        first = False
         chunk_end = min(cur + MAX_RANGE_BLOCKS - 1, to_block)
         out.extend(fetch_logs(rpc_url, pay_to, cur, chunk_end))
         cur = chunk_end + 1
