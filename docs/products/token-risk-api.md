@@ -13,8 +13,8 @@ agent pays $0.005 USDC (x402)
         ▼
 0x2091…5DeA on Base            <- x402 pay-to address
         │
-        ▼  (public chain data)
-bridges/basescan_earnings.py   <- polls Basescan, converts USDC→sats
+        ▼  (public chain data, direct RPC -- no API key)
+bridges/base_rpc_earnings.py  <- eth_getLogs on USDC, converts USDC→sats
         │
         ▼  POST localhost:8787/earn
 Juggernaut ledger (sats)       <- epoch survival accounting
@@ -38,17 +38,21 @@ cp examples/hustle.token-risk.json state/hustle.json
 This wires `check_service` to `GET /health` on the live API, sets the pitch
 the agent advertises, and records the x402 terms.
 
-**2. Get a Basescan API key** (free at https://basescan.org/myapikey).
+**2. No API key needed.** The bridge reads Base directly via public RPC.
 
 **3. Run the bridge** next to the Juggernaut:
 
 ```bash
-BASESCAN_API_KEY=xxx python3 bridges/basescan_earnings.py \
+python3 bridges/base_rpc_earnings.py \
   --pay-to 0x2091125bFE4259b2CfA889165Beb6290d0Df5DeA \
   --earn-url http://127.0.0.1:8787/earn \
   --source "token-risk-api/x402" \
   --interval 300
 ```
+
+(The old `bridges/basescan_earnings.py` is kept for paid-plan Etherscan
+keys; free-tier keys no longer work for Base since the legacy endpoint
+was shut down.)
 
 **4. Run the Juggernaut** (it starts the `POST /earn` webhook itself):
 

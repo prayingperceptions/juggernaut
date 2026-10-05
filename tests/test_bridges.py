@@ -2,6 +2,12 @@
 import pytest
 
 from bridges.basescan_earnings import new_earnings, usdc_to_sats
+from bridges.base_rpc_earnings import (
+    TRANSFER_TOPIC,
+    build_log_filter,
+    pad_topic_address,
+    parse_transfer_log,
+)
 
 PAY_TO = "0x2091125bFE4259b2CfA889165Beb6290d0Df5DeA"
 BTC = 86000.0
@@ -48,3 +54,46 @@ def test_new_earnings_case_insensitive_address():
 def test_new_earnings_bad_rows_skipped():
     out = new_earnings([{"nope": True}, None, tx()], PAY_TO, set(), BTC)
     assert len(out) == 1
+
+
+# -- base_rpc_earnings (keyless RPC bridge) --------------------------------
+
+def test_pad_topic_address():
+    padded = pad_topic_address(PAY_TO)
+    assert padded == "0x" + "0" * 24 + PAY_TO[2:].lower()
+    assert len(padded) == 66
+    assert pad_topic_address(PAY_TO.lower()) == padded
+    with pytest.raises(ValueError):
+        pad_topic_address("0xdead")  # too short
+    with pytest.raises(ValueError):
+        pad_topic_address("not-an-address")
+
+
+def test_build_log_filter():
+    f = build_log_filter(PAY_TO, 1000, 2000)
+    assert f["fromBlock"] == hex(1000)
+    assert f["toBlock"] == hex(2000)
+    assert f["address"] == "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    assert f["topics"][0] == TRANSFER_TOPIC
+    assert f["topics"][1] is None  # wildcard: any sender
+    assert f["topics"][2] == pad_topic_address(PAY_TO)
+
+
+def test_parse_transfer_log():
+    log = {"transactionHash": "0xabc", "data": hex(5000)}  # 5000 base units
+    parsed = parse_transfer_log(log)
+    assert parsed == {"hash": "0xabc", "value": 5000}
+    assert usdc_to_sats(parsed["value"] / 1e6, BTC) == 5
+
+
+def test_parse_transfer_log_bad_rows():
+    assert parse_transfer_log({}) is None
+    assert parse_transfer_log({"transactionHash": "0x1"}) is None
+    assert parse_transfer_log({"transactionHash": "0x1", "data": "zzz"}) is None
+    assert parse_transfer_log(None) is None
+
+
+def test_transfer_topic_is_erc20_transfer():
+    # keccak256("Transfer(address,address,uint256)")
+    assert TRANSFER_TOPIC == \
+        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"

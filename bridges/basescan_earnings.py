@@ -7,6 +7,11 @@ Juggernaut's earnings webhook. Pure public data -- no keys to the money.
 
 Needs: BASESCAN_API_KEY env var (free at https://basescan.org/myapikey)
 
+NOTE (2026-10): the legacy api.basescan.org endpoint was shut down and the
+unified Etherscan V2 API no longer serves Base on free-tier keys. Prefer
+bridges/base_rpc_earnings.py, which needs no key at all. This module is
+kept for paid-plan keys and as the home of the shared conversion helpers.
+
 Run alongside the Juggernaut (example: Token Risk API):
     BASESCAN_API_KEY=xxx python3 bridges/basescan_earnings.py \\
         --pay-to 0x2091125bFE4259b2CfA889165Beb6290d0Df5DeA \\
@@ -129,7 +134,7 @@ def main() -> None:
     ap.add_argument("--earn-url", default="http://127.0.0.1:8787/earn")
     ap.add_argument("--source", default="x402", help="source label for the ledger")
     ap.add_argument("--interval", type=int, default=300, help="poll seconds")
-    ap.add_argument("--state", default="bridges/basescan_state.json")
+    ap.add_argument("--state", default="state/bridges/basescan_state.json")
     ap.add_argument("--once", action="store_true", help="single poll, then exit")
     args = ap.parse_args()
 
