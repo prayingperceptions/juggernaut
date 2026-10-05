@@ -2,10 +2,16 @@
 
 Real brain: laya-mlx (Apple Silicon, fully local, zero output tokens).
 Fake brain: deterministic stand-in so the loop can be tested anywhere.
+
+Set JUGGERNAUT_DEBUG=1 to print raw Laya answers on every tick.
 """
 from __future__ import annotations
 
+import json
+import os
 from dataclasses import dataclass
+
+DEBUG = os.environ.get("JUGGERNAUT_DEBUG") == "1"
 
 
 @dataclass
@@ -63,15 +69,12 @@ class LayaBrain(Brain):
         }
         result = self.agent.predict(state, questions)
         answers = result.get("answers", {})
+        if DEBUG:
+            print("[brain] raw:", json.dumps(answers, default=str)[:1500], flush=True)
 
         done_p = _coerce_probability(answers.get("done"))
-        action_ans = answers.get("next_action")
-        action = action_ans if isinstance(action_ans, str) else str(action_ans)
-        action_conf = _coerce_confidence(action_ans)
+        action, action_conf = _extract_choice(answers.get("next_action"), actions)
         prog_idx, prog_label = _coerce_score(answers.get("progress"), goal.progress_rubric)
-
-        if action not in actions:  # never trust, always verify
-            action, action_conf = actions[0], 0.0
         return TickDecision(done_p, action, action_conf, prog_idx, prog_label)
 
 
@@ -97,12 +100,47 @@ class FakeBrain(Brain):
         )
 
 
+def _extract_choice(ans, actions: list) -> tuple:
+    """Pull (label, confidence) out of a choice answer in any plausible shape,
+    then match it against the action list. Never returns an unmatched label."""
+    label, conf = None, 0.5
+    if isinstance(ans, str):
+        label = ans
+    elif isinstance(ans, dict):
+        for k in ("answer", "label", "value", "choice", "selected"):
+            if isinstance(ans.get(k), str):
+                label = ans[k]
+                break
+        for k in ("answer_confidence", "confidence", "probability", "p"):
+            if isinstance(ans.get(k), (int, float)):
+                conf = _coerce_probability(ans[k])
+                break
+        if label is None and len(ans) == 1:
+            # single-entry {label: prob} shape
+            only = next(iter(ans))
+            if isinstance(only, str):
+                label = only
+                v = ans[only]
+                if isinstance(v, (int, float)):
+                    conf = _coerce_probability(v)
+    if not isinstance(label, str):
+        label = str(ans) if ans is not None else ""
+
+    norm = {a.strip().lower(): a for a in actions}
+    matched = norm.get(label.strip().lower())
+    if matched is None:
+        return actions[0], 0.0  # never trust, always verify
+    return matched, conf
+
+
 def _coerce_probability(ans) -> float:
     if isinstance(ans, bool):
         return 1.0 if ans else 0.0
     if isinstance(ans, (int, float)):
         return max(0.0, min(1.0, float(ans)))
     if isinstance(ans, dict):
+        if "answer" in ans:  # unwrap {"answer": ...} envelopes
+            return _coerce_probability(ans["answer"])
         for k in ("p_true", "probability", "value"):
             if k in ans:
                 return _coerce_probability(ans[k])
@@ -112,17 +150,21 @@ def _coerce_probability(ans) -> float:
     return 0.0
 
 
-def _coerce_confidence(ans) -> float:
-    if isinstance(ans, dict) and "answer_confidence" in ans:
-        return _coerce_probability(ans["answer_confidence"])
-    return 0.5
-
-
 def _coerce_score(ans, rubric: list) -> tuple:
     idx = 0
-    if isinstance(ans, (int, float)):
+    if isinstance(ans, bool):
         idx = int(ans)
+    elif isinstance(ans, (int, float)):
+        idx = int(ans)
+    elif isinstance(ans, str):
+        low = ans.strip().lower()
+        for i, level in enumerate(rubric):
+            if str(level).strip().lower() == low:
+                idx = i
+                break
     elif isinstance(ans, dict):
+        if "answer" in ans:
+            return _coerce_score(ans["answer"], rubric)
         for k in ("level", "score", "value", "expected_level"):
             if k in ans and isinstance(ans[k], (int, float)):
                 idx = int(ans[k])
