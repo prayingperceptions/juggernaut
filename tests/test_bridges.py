@@ -80,9 +80,10 @@ def test_build_log_filter():
 
 
 def test_parse_transfer_log():
-    log = {"transactionHash": "0xabc", "data": hex(5000)}  # 5000 base units
+    log = {"transactionHash": "0xabc", "data": hex(5000),  # 5000 base units
+           "blockNumber": hex(12345)}
     parsed = parse_transfer_log(log)
-    assert parsed == {"hash": "0xabc", "value": 5000}
+    assert parsed == {"hash": "0xabc", "value": 5000, "block": 12345}
     assert usdc_to_sats(parsed["value"] / 1e6, BTC) == 5
 
 
@@ -90,6 +91,8 @@ def test_parse_transfer_log_bad_rows():
     assert parse_transfer_log({}) is None
     assert parse_transfer_log({"transactionHash": "0x1"}) is None
     assert parse_transfer_log({"transactionHash": "0x1", "data": "zzz"}) is None
+    assert parse_transfer_log({"transactionHash": "0x1", "data": hex(1),
+                               "blockNumber": "nope"}) is None
     assert parse_transfer_log(None) is None
 
 

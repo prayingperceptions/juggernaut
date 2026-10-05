@@ -56,11 +56,12 @@ def pad_topic_address(addr: str) -> str:
 
 
 def parse_transfer_log(log: dict) -> dict | None:
-    """Extract tx hash + raw USDC base-units from an eth_getLogs entry."""
+    """Extract tx hash + raw USDC base-units + block from an eth_getLogs entry."""
     try:
         return {
             "hash": log["transactionHash"],
             "value": int(log["data"], 16),  # USDC: 6 decimals
+            "block": int(log["blockNumber"], 16),
         }
     except (KeyError, ValueError, TypeError, AttributeError):
         return None
@@ -161,6 +162,7 @@ def main() -> None:
                 logs = fetch_logs(args.rpc_url, args.pay_to, last_block + 1, tip)
                 price = btc_usd_price()
                 fresh = 0
+                failed_blocks = []
                 for log in logs:
                     parsed = parse_transfer_log(log)
                     if not parsed or parsed["hash"] in seen:
@@ -177,13 +179,16 @@ def main() -> None:
                         # don't mark seen: retry next poll, no double-count
                         print(f"[bridge] earn post failed for "
                               f"{parsed['hash'][:10]}...: {e}", flush=True)
+                        failed_blocks.append(parsed["block"])
                         continue
                     seen.add(parsed["hash"])
                     save_state(args.state, last_block, seen)  # crash-safe
                     fresh += 1
                     print(f"[bridge] +{sats} sats from {parsed['hash'][:10]}... "
                           f"(BTC ${price:,.0f})", flush=True)
-                last_block = tip
+                # never advance past a block whose earnings failed to record;
+                # it gets re-scanned next poll (seen-set dedups the rest)
+                last_block = min([tip] + [b - 1 for b in failed_blocks])
                 save_state(args.state, last_block, seen)
                 if not fresh:
                     print(f"[bridge] no new earnings through block {tip} "
